@@ -18,34 +18,31 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static("public"));
 
-//route /notes to notes.html file
+//route to get from /notes
 app.get("/notes", (req, res) =>
   res.sendFile(path.join(__dirname, "./public/notes.html"))
 );
 
-//on /api/notes route, show notes in the browser
+//Route to get from api/notes
 app.get("/api/notes", (req, res) => {
   readFromFile("./db/db.json").then((data) => res.json(JSON.parse(data)));
 });
 
-//post routing
+//Rout to Post
 app.post("/api/notes", (req, res) => {
-  //read the file. If successful, create an array from the data and push the
-  //new note object 'req.body'. Convert the result to a string and save as db.json
+  //read the file
   fs.readFile("./db/db.json", "utf8", (err, data) => {
-    
     const { title, text } = req.body;
-    const newNote = {
+    const newNotes = {
       title,
       text,
-      noteID: uuidv4(),
+      id: uuidv4(),
     };
-
     if (err) {
       console.error(err);
     } else {
       const parsedData = JSON.parse(data);
-      parsedData.push(newNote);
+      parsedData.push(newNotes);
       fs.writeFile("./db/db.json", JSON.stringify(parsedData, null, 4), (err) =>
         err
           ? console.error(err)
@@ -53,8 +50,39 @@ app.post("/api/notes", (req, res) => {
       );
     }
   });
+  res.json("added");
 });
 
+//Route to Delete:
+//reads file, deletes array item with matching id
+app.delete("/api/notes/:id", (req, res) => {
+  //store ID to delete in a variable
+  let dId = req.params.id;
+
+  //get the db file open
+  fs.readFile("./db/db.json", "utf8", (err, data) => {
+    if (err) {
+      console.error(err);
+    } else {
+      //Turn the db into an array of objects
+      const parsedData = JSON.parse(data);
+      //Find the element whose id is equal to the one we clicked
+      const i = parsedData.findIndex((e) => e.id === dId);
+      //Delete that object by index
+      parsedData.splice(i, 1);
+      //Stringify the result, write and save
+      fs.writeFile("./db/db.json", JSON.stringify(parsedData, null, 4), (err) =>
+        err
+          ? console.error(err)
+          : console.info(`\nData written to './db/db.json'`)
+      );
+    }
+  });
+  //Resolve promise
+  res.json("deleted");
+});
+
+//Route to get all else
 app.get("*", (req, res) =>
   res.sendFile(path.join(__dirname, "./public/index.html"))
 );
